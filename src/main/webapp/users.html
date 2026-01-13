@@ -1,47 +1,250 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8"/>
     <title>User Directory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --radius: 12px;
+            --danger: #dc2626;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            min-height: 100vh;
+            padding: 24px;
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+            min-width: 220px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+        }
+
+        button {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: #f9fafb;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        tr:hover td {
+            background: #f9fafb;
+        }
+
+        .delete {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+
+        .delete:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 16px;
+            text-decoration: none;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 900px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tr {
+                margin-bottom: 12px;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 10px;
+            }
+
+            td {
+                border: none;
+                padding: 6px 0;
+            }
+
+            td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--muted);
+                display: block;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <h2>Users</h2>
-    <input id="search" placeholder="Search by name, email, phone"/>
-    <button id="refresh">Refresh</button>
-    <table border="1" id="usersTable">
-        <thead>
-            <tr>
-                <th>Name</th><th>DOB</th><th>Email</th><th>Phone</th><th>Gender</th><th>Address</th><th>Actions</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="container">
+        <a class="back" href="index.html">← Back to Dashboard</a>
+
+        <div class="card">
+            <div class="header">
+                <h2>User Directory</h2>
+                <div class="controls">
+                    <input id="search" type="text" placeholder="Search by name, email, phone"/>
+                    <button id="refresh">Refresh</button>
+                </div>
+            </div>
+
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>DOB</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Gender</th>
+                        <th>Address</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
         async function fetchUsers() {
             const res = await fetch('/api/users');
-            const data = await res.json();
-            return data;
+            return await res.json();
         }
 
         function render(users) {
             const tbody = document.querySelector('#usersTable tbody');
             tbody.innerHTML = '';
+
             for (const u of users) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.dob)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.phone)}</td><td>${escapeHtml(u.gender)}</td><td>${escapeHtml(u.address)}</td>
-                <td><button data-id="${u.email}" class="delete">Delete</button></td>`;
+                tr.innerHTML = `
+                    <td data-label="Name">${escapeHtml(u.name)}</td>
+                    <td data-label="DOB">${escapeHtml(u.dob)}</td>
+                    <td data-label="Email">${escapeHtml(u.email)}</td>
+                    <td data-label="Phone">${escapeHtml(u.phone)}</td>
+                    <td data-label="Gender">${escapeHtml(u.gender)}</td>
+                    <td data-label="Address">${escapeHtml(u.address)}</td>
+                    <td data-label="Actions">
+                        <button data-id="${u.email}" class="delete">Delete</button>
+                    </td>
+                `;
                 tbody.appendChild(tr);
             }
+
             document.querySelectorAll('.delete').forEach(b => {
-                b.addEventListener('click', async (ev) => {
+                b.addEventListener('click', async () => {
                     const id = b.getAttribute('data-id');
                     if (!confirm('Delete user ' + id + '?')) return;
-                    const resp = await fetch('/api/users/delete', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'id=' + encodeURIComponent(id) });
-                    if (resp.ok) {
-                        loadAndRender();
-                    } else {
-                        alert('Failed to delete');
-                    }
+
+                    const resp = await fetch('/api/users/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id=' + encodeURIComponent(id)
+                    });
+
+                    if (resp.ok) loadAndRender();
+                    else alert('Failed to delete');
                 });
             });
         }
@@ -49,16 +252,18 @@
         function filterUsers(users, q) {
             if (!q) return users;
             q = q.toLowerCase();
-            return users.filter(u => {
-                return (u.name || '').toLowerCase().includes(q) ||
-                       (u.email || '').toLowerCase().includes(q) ||
-                       (u.phone || '').toLowerCase().includes(q);
-            });
+            return users.filter(u =>
+                (u.name || '').toLowerCase().includes(q) ||
+                (u.email || '').toLowerCase().includes(q) ||
+                (u.phone || '').toLowerCase().includes(q)
+            );
         }
 
         function escapeHtml(s) {
             if (!s) return '';
-            return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+            return s.replaceAll('&','&amp;')
+                    .replaceAll('<','&lt;')
+                    .replaceAll('>','&gt;');
         }
 
         async function loadAndRender() {
@@ -73,4 +278,3 @@
     </script>
 </body>
 </html>
-

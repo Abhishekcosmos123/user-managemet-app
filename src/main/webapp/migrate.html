@@ -1,24 +1,158 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8"/>
     <title>BigQuery Migration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --radius: 12px;
+            --success: #16a34a;
+            --error: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card);
+            width: 100%;
+            max-width: 420px;
+            padding: 32px;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 1.4rem;
+        }
+
+        p {
+            margin: 0 0 24px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            margin-top: 6px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            font-size: 0.95rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--primary);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37,99,235,0.25);
+        }
+
+        #status {
+            margin-top: 16px;
+            font-size: 0.9rem;
+            text-align: center;
+            color: var(--muted);
+            word-break: break-word;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 16px;
+            text-decoration: none;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
+
 <body>
-    <h2>BigQuery Migration</h2>
-    <label>Dataset: <input id="dataset" value="user_dataset"></label><br/>
-    <label>Table: <input id="table" value="User"></label><br/>
-    <button id="migrate">Migrate All Users</button>
-    <div id="status"></div>
+    <div class="card">
+        <a class="back" href="index.html">← Back to Dashboard</a>
+
+        <h2>BigQuery Migration</h2>
+        <p>Migrate all users into a BigQuery table</p>
+
+        <label>
+            Dataset
+            <input id="dataset" value="user_dataset">
+        </label>
+
+        <label>
+            Table
+            <input id="table" value="User">
+        </label>
+
+        <button id="migrate">Migrate All Users</button>
+
+        <div id="status"></div>
+    </div>
+
     <script>
         document.getElementById('migrate').addEventListener('click', async () => {
             const dataset = document.getElementById('dataset').value;
             const table = document.getElementById('table').value;
-            const resp = await fetch('/api/migrate', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'dataset=' + encodeURIComponent(dataset) + '&table=' + encodeURIComponent(table) });
+
+            const status = document.getElementById('status');
+            status.innerText = 'Migrating users…';
+
+            const resp = await fetch('/api/migrate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'dataset=' + encodeURIComponent(dataset) +
+                      '&table=' + encodeURIComponent(table)
+            });
+
             const text = await resp.text();
-            document.getElementById('status').innerText = text;
+            status.innerText = text;
+            status.style.color = resp.ok ? 'var(--success)' : 'var(--error)';
         });
     </script>
 </body>
 </html>
-
