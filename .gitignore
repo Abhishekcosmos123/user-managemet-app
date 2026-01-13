@@ -1,0 +1,54 @@
+# ------------------------------------
+# Maven
+# ------------------------------------
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IntelliJ / IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Jetty / Tomcat work dirs
+work/
+temp/
+logs/
+
+# Environment / secrets
+*.env
+.env.local
+*.properties.local
+
+# Node stuff if front-end exists
+node_modules/
+npm-debug.log
+
+# Package archive artifacts
+*.war
+*.jar
+*.ear
+
+# Backup & junk
+*~
+*.swp

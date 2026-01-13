@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Upload Users (Excel)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+</head>
+<body>
+    <h2>Upload Excel (.xlsx)</h2>
+    <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
+        <input type="file" name="file" accept=".xlsx" required />
+        <button type="submit">Upload</button>
+    </form>
+    <div id="result"></div>
+    <script>
+        const form = document.getElementById('uploadForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = new FormData(form);
+            const resp = await fetch('/upload', { method: 'POST', body: data });
+            const text = await resp.text();
+            document.getElementById('result').innerText = text;
+        });
+    </script>
+</body>
+</html>
+

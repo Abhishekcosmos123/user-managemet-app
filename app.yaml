@@ -1,0 +1,8 @@
+runtime: java11
+entrypoint: java -jar target/user-management-app-0.1.0.jar
+env: standard
+
+handlers:
+  - url: /.*
+    script: this field is required, but ignored
+
