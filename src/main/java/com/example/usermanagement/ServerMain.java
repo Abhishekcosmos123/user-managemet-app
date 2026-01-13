@@ -6,6 +6,7 @@ import com.example.usermanagement.servlets.MigrateServlet;
 import com.example.usermanagement.servlets.UploadServlet;
 import com.example.usermanagement.servlets.UserListServlet;
 import com.example.usermanagement.servlets.SampleExcelServlet;
+import jakarta.servlet.MultipartConfigElement;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -34,7 +35,12 @@ public class ServerMain {
         context.addServlet(defaultHolder, "/");
 
         // Register servlets programmatically
-        context.addServlet(new ServletHolder(new UploadServlet()), "/upload");
+        // Note: Servlets are also using @WebServlet annotations. 
+        // Jetty's ServletContextHandler with SESSIONS does not scan annotations by default.
+        // We register them here to ensure they work in standalone mode.
+        ServletHolder uploadHolder = new ServletHolder(new UploadServlet());
+        uploadHolder.getRegistration().setMultipartConfig(new MultipartConfigElement("/tmp", 10 * 1024 * 1024, 10 * 1024 * 1024, 1024 * 1024));
+        context.addServlet(uploadHolder, "/upload");
         context.addServlet(new ServletHolder(new UserListServlet()), "/api/users");
         context.addServlet(new ServletHolder(new DeleteUserServlet()), "/api/users/delete");
         context.addServlet(new ServletHolder(new LoginServlet()), "/login");

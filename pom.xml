@@ -119,6 +119,9 @@
                     </webApp>
                     <scanIntervalSeconds>10</scanIntervalSeconds>
                     <useProvidedScope>true</useProvidedScope>
+                  <webAppConfig>
+                    <contextPath>/</contextPath>
+                  </webAppConfig>
                 </configuration>
             </plugin>
         </plugins>
