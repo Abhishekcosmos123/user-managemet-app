@@ -5,6 +5,7 @@ import com.example.usermanagement.servlets.LoginServlet;
 import com.example.usermanagement.servlets.MigrateServlet;
 import com.example.usermanagement.servlets.UploadServlet;
 import com.example.usermanagement.servlets.UserListServlet;
+import com.example.usermanagement.servlets.SampleExcelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -38,6 +39,7 @@ public class ServerMain {
         context.addServlet(new ServletHolder(new DeleteUserServlet()), "/api/users/delete");
         context.addServlet(new ServletHolder(new LoginServlet()), "/login");
         context.addServlet(new ServletHolder(new MigrateServlet()), "/api/migrate");
+        context.addServlet(new ServletHolder(new SampleExcelServlet()), "/sample/generate");
 
         server.setHandler(context);
         server.start();

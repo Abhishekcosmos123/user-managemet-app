@@ -6,7 +6,6 @@ import com.example.usermanagement.util.DatastoreUtil;
 import com.google.gson.Gson;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,8 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-@WebServlet("/api/migrate")
 public class MigrateServlet extends HttpServlet {
     private static final Gson gson = new Gson();
 
@@ -23,10 +20,11 @@ public class MigrateServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String dataset = req.getParameter("dataset");
         String table = req.getParameter("table");
-        if (dataset == null || table == null) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write(gson.toJson("Missing dataset or table"));
-            return;
+        if (dataset == null || dataset.isEmpty()) {
+            dataset = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_DATASET", "user_dataset");
+        }
+        if (table == null || table.isEmpty()) {
+            table = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_TABLE", "User");
         }
         List<UserRecord> users = DatastoreUtil.listUsers();
         BigQueryUtil.ensureTable(dataset, table);

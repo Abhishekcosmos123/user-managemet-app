@@ -8,7 +8,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
-@WebServlet("/upload")
 @MultipartConfig
 public class UploadServlet extends HttpServlet {
     private static final Gson gson = new Gson();
@@ -66,7 +64,9 @@ public class UploadServlet extends HttpServlet {
                         default: break;
                     }
                 }
-                if (u.getEmail() == null || u.getEmail().isEmpty()) continue;
+                if (u.getEmail() == null || u.getEmail().trim().isEmpty()) continue;
+                // Normalize email to lowercase for consistent lookups
+                u.setEmail(u.getEmail().trim().toLowerCase());
                 DatastoreUtil.saveUser(u);
                 count++;
             }

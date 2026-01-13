@@ -4,111 +4,34 @@
     <meta charset="utf-8"/>
     <title>Upload Users (Excel)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-
-    <style>
-        :root {
-            --bg: #f4f6f8;
-            --card: #ffffff;
-            --primary: #2563eb;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --radius: 12px;
-        }
-
-        * {
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text);
-        }
-
-        .card {
-            background: var(--card);
-            width: 100%;
-            max-width: 420px;
-            padding: 32px;
-            border-radius: var(--radius);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-        }
-
-        h2 {
-            margin: 0 0 8px;
-            font-size: 1.4rem;
-        }
-
-        p {
-            margin: 0 0 24px;
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px dashed #d1d5db;
-            border-radius: 10px;
-            background: #f9fafb;
-            cursor: pointer;
-        }
-
-        button {
-            margin-top: 16px;
-            width: 100%;
-            padding: 12px;
-            background: var(--primary);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        button:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(37,99,235,0.25);
-        }
-
-        #result {
-            margin-top: 16px;
-            font-size: 0.9rem;
-            color: var(--muted);
-            word-break: break-word;
-        }
-
-        .back {
-            display: inline-block;
-            margin-bottom: 16px;
-            text-decoration: none;
-            color: var(--primary);
-            font-size: 0.9rem;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 
 <body>
-    <div class="card">
-        <a class="back" href="index.html">← Back to Dashboard</a>
+    <div class="app-shell">
+        <header class="navbar">
+            <div class="nav-brand">USER MGMT</div>
+            <div class="nav-links">
+                <a href="index.html">Login</a>
+                <a href="upload.html" class="active">Upload</a>
+                <a href="users.html">Users</a>
+                <a href="migrate.html">Migrate</a>
+            </div>
+        </header>
 
-        <h2>Upload Users</h2>
-        <p>Select an Excel (.xlsx) file to import users</p>
-
-        <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
-            <input type="file" name="file" accept=".xlsx" required />
-            <button type="submit">Upload Excel</button>
-        </form>
-
-        <div id="result"></div>
+        <main class="page">
+        <div class="card">
+            <p class="muted">Select an Excel (.xlsx) file containing headers: Name, DOB, Email, Password, Phone, Gender, Address</p>
+            <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
+                <input type="file" name="file" accept=".xlsx" required />
+                <div style="margin-top:12px;">
+                    <button type="submit">Upload Excel</button>
+                    <button type="button" class="secondary" onclick="window.location='/sample/generate'">Download sample</button>
+                </div>
+            </form>
+            <div id="result"></div>
+        </div>
+        </main>
     </div>
 
     <script>

@@ -99,26 +99,28 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.example.usermanagement.ServerMain</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
-                <version>9.4.53.v20231009</version>
+                <version>11.0.14</version>
                 <configuration>
-                  <webAppConfig>
-                    <contextPath>/</contextPath>
-                    <war>${project.build.directory}/${project.build.finalName}</war>
-                  </webAppConfig>
+                    <httpConnector>
+                        <port>8080</port>
+                    </httpConnector>
+                    <webApp>
+                        <contextPath>/</contextPath>
+                    </webApp>
+                    <scanIntervalSeconds>10</scanIntervalSeconds>
+                    <useProvidedScope>true</useProvidedScope>
                 </configuration>
-              </plugin><plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-maven-plugin</artifactId>
-                <version>9.4.53.v20231009</version>
-                <configuration>
-                  <webAppConfig>
-                    <contextPath>/</contextPath>
-                    <war>${project.build.directory}/${project.build.finalName}</war>
-                  </webAppConfig>
-                </configuration>
-              </plugin>
+            </plugin>
         </plugins>
         <resources>
             <resource>
