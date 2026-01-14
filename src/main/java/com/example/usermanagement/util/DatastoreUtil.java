@@ -2,13 +2,30 @@ package com.example.usermanagement.util;
 
 import com.example.usermanagement.model.UserRecord;
 import com.google.cloud.datastore.*;
+import com.google.auth.oauth2.GoogleCredentials;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DatastoreUtil {
     private static final String KIND = "User";
-    private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
+    private static final Datastore datastore = createDatastore();
+
+    private static Datastore createDatastore() {
+        try {
+            String projectId = CredentialsUtil.getProjectId();
+            GoogleCredentials credentials = CredentialsUtil.getCredentials();
+            
+            return DatastoreOptions.newBuilder()
+                .setProjectId(projectId)
+                .setCredentials(credentials)
+                .build()
+                .getService();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize Datastore: " + e.getMessage(), e);
+        }
+    }
 
     public static Key userKey(String id) {
         return datastore.newKeyFactory().setKind(KIND).newKey(id);

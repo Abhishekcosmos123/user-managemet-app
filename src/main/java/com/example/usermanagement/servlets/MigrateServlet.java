@@ -18,19 +18,39 @@ public class MigrateServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String dataset = req.getParameter("dataset");
-        String table = req.getParameter("table");
-        if (dataset == null || dataset.isEmpty()) {
-            dataset = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_DATASET", "user_dataset");
+        resp.setContentType("text/plain;charset=UTF-8");
+        
+        try {
+            String dataset = req.getParameter("dataset");
+            String table = req.getParameter("table");
+            if (dataset == null || dataset.isEmpty()) {
+                dataset = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_DATASET", "user_dataset");
+            }
+            if (table == null || table.isEmpty()) {
+                table = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_TABLE", "User");
+            }
+            
+            List<UserRecord> users = DatastoreUtil.listUsers();
+            if (users.isEmpty()) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("No users found in Datastore to migrate.");
+                return;
+            }
+            
+            BigQueryUtil.ensureTable(dataset, table);
+            BigQueryUtil.insertUsers(dataset, table, users);
+            
+            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.getWriter().write("Successfully migrated " + users.size() + " users to BigQuery dataset: " + dataset + ", table: " + table);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("Migration interrupted: " + e.getMessage());
+        } catch (Exception e) {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("Migration failed: " + e.getMessage());
+            e.printStackTrace();
         }
-        if (table == null || table.isEmpty()) {
-            table = com.example.usermanagement.util.Config.get("DEFAULT_BIGQUERY_TABLE", "User");
-        }
-        List<UserRecord> users = DatastoreUtil.listUsers();
-        BigQueryUtil.ensureTable(dataset, table);
-        BigQueryUtil.insertUsers(dataset, table, users);
-        resp.setContentType("application/json");
-        resp.getWriter().write(gson.toJson(Map.of("migrated", users.size())));
     }
 }
 

@@ -14,6 +14,17 @@ public class UserRecord {
 
     public UserRecord() {}
 
+    public UserRecord(String id, String name, String dob, String email, String password, String phone, String gender, String address) {
+        this.id = id;
+        this.name = name;
+        this.dob = dob;
+        this.email = email;
+        this.password = password;
+        this.phone = phone;
+        this.gender = gender;
+        this.address = address;
+    }
+
     public String getId() {
         return id;
     }

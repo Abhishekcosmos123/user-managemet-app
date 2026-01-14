@@ -36,12 +36,50 @@
 
     <script>
         const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+        
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const data = new FormData(form);
-            const resp = await fetch('/upload', { method: 'POST', body: data });
-            const text = await resp.text();
-            document.getElementById('result').innerText = text;
+            
+            const fileInput = form.querySelector('input[type="file"]');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultDiv.textContent = 'Please select a file';
+                resultDiv.className = 'status error';
+                return;
+            }
+            
+            resultDiv.textContent = 'Uploading...';
+            resultDiv.className = 'status';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                const resp = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                    // Don't set Content-Type header - browser will set it automatically with boundary
+                });
+                
+                const text = await resp.text();
+                
+                if (resp.ok) {
+                    try {
+                        const json = JSON.parse(text);
+                        resultDiv.textContent = `Successfully imported ${json.imported || 0} users`;
+                        resultDiv.className = 'status success';
+                    } catch {
+                        resultDiv.textContent = text;
+                        resultDiv.className = 'status success';
+                    }
+                } else {
+                    resultDiv.textContent = 'Error: ' + text;
+                    resultDiv.className = 'status error';
+                }
+            } catch (err) {
+                resultDiv.textContent = 'Upload failed: ' + err.message;
+                resultDiv.className = 'status error';
+            }
         });
     </script>
 </body>
