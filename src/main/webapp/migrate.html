@@ -6,17 +6,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="/static/app.js" defer></script>
+    <style>
+      /* Inline loader layout fix for migrate.html only */
+      .loader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        flex: 1;
+        min-width: 0;
+      }
+      .custom-migrate-loader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+      }
+      /* Fill width for progress bar on migrate loader */
+      #loaderProgressBar {
+        width: 0%;
+      }
+      /* Center percentage below */
+      #loaderPercentage {
+        margin-top: 12px;
+        font-size: 1.1rem;
+        text-align: center;
+        width: 100%;
+        color: #fff;
+      }
+      /* Space out loader text and progress bar */
+      #loaderText {
+        margin-bottom: 16px;
+        width: 100%;
+        text-align: center;
+      }
+      .loader-progress {
+        width: 100%;
+        margin-bottom: 0;
+      }
+    </style>
 </head>
 
 <body>
     <div class="loader-overlay" id="loaderOverlay">
         <div class="loader-container">
-            <div class="loader-spinner"></div>
-            <div class="loader-text" id="loaderText">Processing...</div>
-            <div class="loader-progress">
-                <div class="loader-progress-bar" id="loaderProgressBar"></div>
+            <div class="custom-migrate-loader-content">
+              <div class="loader-text" id="loaderText">Processing...</div>
+              <div class="loader-progress">
+                  <div class="loader-progress-bar" id="loaderProgressBar"></div>
+              </div>
+              <div class="loader-percentage" id="loaderPercentage">0%</div>
             </div>
-            <div class="loader-percentage" id="loaderPercentage">0%</div>
         </div>
     </div>
 
