@@ -5,57 +5,295 @@
     <title>BigQuery Migration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
 </head>
 
 <body>
-    <div class="app-shell">
-        <header class="navbar">
-            <div class="nav-brand">USER MGMT</div>
-            <div class="nav-links">
-                <a href="index.html">Login</a>
-                <a href="upload.html">Upload</a>
-                <a href="users.html">Users</a>
-                <a href="migrate.html" class="active">Migrate</a>
+    <div class="loader-overlay" id="loaderOverlay">
+        <div class="loader-container">
+            <div class="loader-spinner"></div>
+            <div class="loader-text" id="loaderText">Processing...</div>
+            <div class="loader-progress">
+                <div class="loader-progress-bar" id="loaderProgressBar"></div>
             </div>
-        </header>
+            <div class="loader-percentage" id="loaderPercentage">0%</div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+        <header class="navbar" data-page="migrate"></header>
 
         <main class="page">
-        <div class="card" style="max-width:640px;margin:0 auto;">
-            <p class="muted">Migrate all users into a BigQuery table. Ensure `GOOGLE_APPLICATION_CREDENTIALS` has access to BigQuery.</p>
-            <div class="field-group">
-                <label for="dataset">Dataset</label>
-                <input id="dataset" value="user_dataset">
+            <div class="card">
+                <h2>BigQuery Migration</h2>
+                <p class="subtitle">Migrate users from Datastore to BigQuery for advanced analytics</p>
+                
+                <!-- Migration Form as Single Row -->
+                <div class="migration-form-row">
+                    <div class="migration-form-field">
+                        <label for="dataset">Dataset</label>
+                        <input id="dataset" type="text" value="user_dataset" placeholder="user_dataset">
+                    </div>
+                    <div class="migration-form-field">
+                        <label for="table">Table</label>
+                        <input id="table" type="text" value="User" placeholder="User">
+                    </div>
+                    <div class="migration-form-action">
+                        <button id="migrate" class="button-primary">Migrate All Users</button>
+                    </div>
+                </div>
+                <div id="status" class="status" style="margin-top: 16px;"></div>
+
+
+                <!-- BigQuery Users Table -->
+                <table id="bigqueryUsersTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Gender</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                Loading users from BigQuery...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div id="pager" class="pager-container"></div>
             </div>
-            <div class="field-group">
-                <label for="table">Table</label>
-                <input id="table" value="User">
-            </div>
-            <div style="margin-top:12px;">
-                <button id="migrate">Migrate All Users</button>
-            </div>
-            <div id="status" class="status"></div>
-        </div>
         </main>
     </div>
 
     <script>
-        document.getElementById('migrate').addEventListener('click', async () => {
-            const dataset = document.getElementById('dataset').value;
-            const table = document.getElementById('table').value;
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await App.fetchSession();
+            if (!session.loggedIn) {
+                window.location.href = 'index.html';
+                return;
+            }
+            App.renderNavbar('migrate');
 
-            const status = document.getElementById('status');
-            status.innerText = 'Migrating users…';
+            // Loader functions
+            function showLoader(text = 'Processing...') {
+                const overlay = document.getElementById('loaderOverlay');
+                const loaderText = document.getElementById('loaderText');
+                loaderText.textContent = text;
+                overlay.classList.add('active');
+            }
 
-            const resp = await fetch('/api/migrate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'dataset=' + encodeURIComponent(dataset) +
-                      '&table=' + encodeURIComponent(table)
+            function hideLoader() {
+                const overlay = document.getElementById('loaderOverlay');
+                overlay.classList.remove('active');
+            }
+
+            function updateLoaderProgress(percent, text = null) {
+                const progressBar = document.getElementById('loaderProgressBar');
+                const percentage = document.getElementById('loaderPercentage');
+                progressBar.style.width = percent + '%';
+                percentage.textContent = Math.round(percent) + '%';
+                if (text) {
+                    document.getElementById('loaderText').textContent = text;
+                }
+            }
+
+            // Pagination state
+            let currentPage = 1;
+            let currentPageSize = 10;
+            let currentSearch = '';
+            let autoRefreshInterval = null;
+
+            // Fetch BigQuery users with pagination
+            async function fetchBigQueryUsers(page = 1, pageSize = 10, search = '') {
+                const dataset = document.getElementById('dataset').value.trim() || 'user_dataset';
+                const table = document.getElementById('table').value.trim() || 'User';
+                
+                const params = new URLSearchParams({
+                    dataset,
+                    table,
+                    page: page.toString(),
+                    pageSize: pageSize.toString()
+                });
+                
+                if (search && search.trim()) {
+                    params.append('search', search.trim());
+                }
+                
+                const res = await fetch(`/api/bigquery/users?${params.toString()}`);
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error || 'Failed to fetch users');
+                }
+                return await res.json();
+            }
+
+            function escapeHtml(s) {
+                if (!s) return '';
+                return s.replaceAll('&','&amp;')
+                        .replaceAll('<','&lt;')
+                        .replaceAll('>','&gt;');
+            }
+
+            function renderUsers(users, pageInfo) {
+                const tbody = document.querySelector('#bigqueryUsersTable tbody');
+                tbody.innerHTML = '';
+
+                if (users.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                No users found in BigQuery. Migrate users first.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                for (const u of users) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td data-label="Name">${escapeHtml(u.name || '-')}</td>
+                        <td data-label="Email">${escapeHtml(u.email || '-')}</td>
+                        <td data-label="Phone">${escapeHtml(u.phone || '-')}</td>
+                        <td data-label="Gender">${escapeHtml(u.gender || '-')}</td>
+                        <td data-label="Address">${escapeHtml(u.address || '-')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+
+            async function loadAndRender(page = 1) {
+                try {
+                    const response = await fetchBigQueryUsers(page, currentPageSize, currentSearch);
+                    renderUsers(response.users, response);
+                    currentPage = response.page;
+
+
+                    App.renderPager('pager', {
+                        page: response.page,
+                        totalPages: response.totalPages,
+                        totalItems: response.totalItems,
+                    }, (newPage) => loadAndRender(newPage), {
+                        pageSize: currentPageSize,
+                        onPageSizeChange: (newSize) => {
+                            currentPageSize = newSize;
+                            loadAndRender(1);
+                        }
+                    });
+                } catch (err) {
+                    const tbody = document.querySelector('#bigqueryUsersTable tbody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--error);">
+                                Error: ${escapeHtml(err.message)}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+            // Auto-refresh functionality
+            function startAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                // Refresh every 30 seconds
+                autoRefreshInterval = setInterval(() => {
+                    loadAndRender(currentPage);
+                }, 30000);
+            }
+
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+
+            // Event listeners - Listen to navbar search
+            window.addEventListener('navbarSearch', (e) => {
+                currentSearch = e.detail;
+                loadAndRender(1);
             });
 
-            const text = await resp.text();
-            status.innerText = text;
-            status.style.color = resp.ok ? 'var(--success)' : 'var(--error)';
+            // Migration handler
+            document.getElementById('migrate').addEventListener('click', async () => {
+                const dataset = document.getElementById('dataset').value.trim();
+                const table = document.getElementById('table').value.trim();
+
+                if (!dataset || !table) {
+                    const status = document.getElementById('status');
+                    status.innerText = 'Please provide both dataset and table names';
+                    status.className = 'status error';
+                    return;
+                }
+
+                const status = document.getElementById('status');
+                status.innerText = '';
+                status.className = 'status';
+
+                // Stop auto-refresh during migration
+                stopAutoRefresh();
+
+                // Show loader with progress simulation
+                showLoader('Preparing migration...');
+                updateLoaderProgress(10);
+
+                const progressInterval = setInterval(() => {
+                    const current = parseInt(document.getElementById('loaderProgressBar').style.width) || 10;
+                    if (current < 90) {
+                        updateLoaderProgress(current + 10, 'Migrating users to BigQuery...');
+                    }
+                }, 500);
+
+                try {
+                    const resp = await fetch('/api/migrate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'dataset=' + encodeURIComponent(dataset) +
+                              '&table=' + encodeURIComponent(table)
+                    });
+
+                    clearInterval(progressInterval);
+                    updateLoaderProgress(100, 'Migration complete!');
+
+                    const text = await resp.text();
+                    
+                    setTimeout(() => {
+                        hideLoader();
+                        status.innerText = text;
+                        status.className = 'status ' + (resp.ok ? 'success' : 'error');
+                        
+                        if (resp.ok) {
+                            // Reload BigQuery users after successful migration
+                            loadAndRender(1);
+                            // Restart auto-refresh
+                            startAutoRefresh();
+                        }
+                    }, 500);
+                } catch (err) {
+                    clearInterval(progressInterval);
+                    hideLoader();
+                    status.innerText = 'Migration failed: ' + err.message;
+                    status.className = 'status error';
+                    // Restart auto-refresh even on error
+                    startAutoRefresh();
+                }
+            });
+
+            // Initial load
+            loadAndRender(1);
+            startAutoRefresh();
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                stopAutoRefresh();
+            });
         });
     </script>
 </body>

@@ -5,73 +5,85 @@
     <title>User Management – Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
 </head>
 
-<body class="full-page">
-    <div class="login-wrapper">
-        <div class="card card-narrow">
-            <h2>Welcome back</h2>
-            <p class="subtitle">Sign in with credentials uploaded from Excel to manage users.</p>
+<body>
+    <div class="app-shell">
+        <header class="navbar" data-page="login"></header>
 
-            <form id="loginForm">
-                <div class="field-group">
-                    <label for="email">Email</label>
-                    <input id="email" name="email" type="email" required>
+        <main class="page">
+            <div class="login-wrapper">
+                <div class="card card-narrow">
+                    <h2>Welcome back</h2>
+                    <p class="subtitle">Sign in with credentials uploaded from Excel to manage users.</p>
+
+                    <form id="loginForm">
+                        <div class="field-group">
+                            <label for="email">Email</label>
+                            <input id="email" name="email" type="email" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="password">Password</label>
+                            <input id="password" name="password" type="password" required>
+                        </div>
+                        <div class="form-actions" style="justify-content: center;">
+                            <button type="submit" class="button-primary">Login</button>
+                        </div>
+                        <p class="helper-text">Sign in with credentials from your uploaded Excel file.</p>
+                    </form>
+                    <div id="message" class="status"></div>
                 </div>
-                <div class="field-group">
-                    <label for="password">Password</label>
-                    <input id="password" name="password" type="password" required>
-                </div>
-                <div class="field-inline" style="justify-content:space-between;margin-top:10px;">
-                    <span class="pill">Excel-based users only</span>
-                    <button type="submit">Login</button>
-                </div>
-            </form>
-            <div id="message" class="status"></div>
-        </div>
+            </div>
+        </main>
     </div>
 
     <script>
-        const f = document.getElementById('loginForm');
-        const msg = document.getElementById('message');
-        
-        f.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = new FormData(f);
-            const email = form.get('email');
-            const password = form.get('password');
+        document.addEventListener('DOMContentLoaded', async () => {
+            await App.fetchSession();
+            App.renderNavbar('login');
+
+            const f = document.getElementById('loginForm');
+            const msg = document.getElementById('message');
             
-            if (!email || !password) {
-                msg.textContent = 'Please enter both email and password.';
-                msg.className = 'status error';
-                return;
-            }
-            
-            msg.textContent = 'Logging in...';
-            msg.className = 'status';
-            
-            try {
-                const resp = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ email: email.trim().toLowerCase(), password: password })
-                });
+            f.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = new FormData(f);
+                const email = form.get('email');
+                const password = form.get('password');
                 
-                const text = await resp.text();
-                msg.textContent = text;
+                if (!email || !password) {
+                    msg.textContent = 'Please enter both email and password.';
+                    msg.className = 'status error';
+                    return;
+                }
                 
-                if (resp.ok) {
-                    msg.className = 'status success';
-                    setTimeout(() => {
-                        window.location.href = '/users.html';
-                    }, 500);
-                } else {
+                msg.textContent = 'Logging in...';
+                msg.className = 'status';
+                
+                try {
+                    const resp = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ email: email.trim().toLowerCase(), password: password })
+                    });
+                    
+                    const text = await resp.text();
+                    msg.textContent = text;
+                    
+                    if (resp.ok) {
+                        msg.className = 'status success';
+                        setTimeout(() => {
+                            window.location.href = '/users.html';
+                        }, 500);
+                    } else {
+                        msg.className = 'status error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error: ' + err.message;
                     msg.className = 'status error';
                 }
-            } catch (err) {
-                msg.textContent = 'Network error: ' + err.message;
-                msg.className = 'status error';
-            }
+            });
         });
     </script>
 </body>

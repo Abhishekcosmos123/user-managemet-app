@@ -113,4 +113,31 @@
         <servlet-name>SampleExcelServlet</servlet-name>
         <url-pattern>/sample/generate</url-pattern>
     </servlet-mapping>
+
+    <servlet>
+        <servlet-name>SessionServlet</servlet-name>
+        <servlet-class>com.example.usermanagement.servlets.SessionServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SessionServlet</servlet-name>
+        <url-pattern>/api/session</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>LogoutServlet</servlet-name>
+        <servlet-class>com.example.usermanagement.servlets.LogoutServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LogoutServlet</servlet-name>
+        <url-pattern>/logout</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>BigQueryUserListServlet</servlet-name>
+        <servlet-class>com.example.usermanagement.servlets.BigQueryUserListServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>BigQueryUserListServlet</servlet-name>
+        <url-pattern>/api/bigquery/users</url-pattern>
+    </servlet-mapping>
 </web-app>

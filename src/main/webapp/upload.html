@@ -5,81 +5,146 @@
     <title>Upload Users (Excel)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
 </head>
 
 <body>
-    <div class="app-shell">
-        <header class="navbar">
-            <div class="nav-brand">USER MGMT</div>
-            <div class="nav-links">
-                <a href="index.html">Login</a>
-                <a href="upload.html" class="active">Upload</a>
-                <a href="users.html">Users</a>
-                <a href="migrate.html">Migrate</a>
+    <div class="loader-overlay" id="loaderOverlay">
+        <div class="loader-container">
+            <div class="loader-spinner"></div>
+            <div class="loader-text" id="loaderText">Uploading file...</div>
+            <div class="loader-progress">
+                <div class="loader-progress-bar" id="loaderProgressBar"></div>
             </div>
-        </header>
+            <div class="loader-percentage" id="loaderPercentage">0%</div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+        <header class="navbar" data-page="upload"></header>
 
         <main class="page">
-        <div class="card">
-            <p class="muted">Select an Excel (.xlsx) file containing headers: Name, DOB, Email, Password, Phone, Gender, Address</p>
-            <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
-                <input type="file" name="file" accept=".xlsx" required />
-                <div style="margin-top:12px;">
-                    <button type="submit">Upload Excel</button>
-                    <button type="button" class="secondary" onclick="window.location='/sample/generate'">Download sample</button>
-                </div>
-            </form>
-            <div id="result"></div>
-        </div>
+            <div class="card">
+                <h2>Upload Users</h2>
+                <p class="subtitle muted">Import user data from an Excel file (.xlsx format)</p>
+                
+                <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
+                    <div class="field-group">
+                        <label for="fileInput">Excel File</label>
+                        <input id="fileInput" type="file" name="file" accept=".xlsx" required />
+                        <p class="muted" style="margin-top: 8px; font-size: 0.85rem;">
+                            Required columns: Name, DOB, Email, Password, Phone, Gender, Address
+                        </p>
+                    </div>
+                    <div class="field-inline" style="margin-top: 20px;">
+                        <button type="submit" class="button-primary">Upload Excel</button>
+                        <button type="button" class="secondary" onclick="window.location='/sample/generate'">
+                            Download Sample
+                        </button>
+                    </div>
+                </form>
+                <div id="result"></div>
+            </div>
         </main>
     </div>
 
     <script>
-        const form = document.getElementById('uploadForm');
-        const resultDiv = document.getElementById('result');
-        
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const fileInput = form.querySelector('input[type="file"]');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                resultDiv.textContent = 'Please select a file';
-                resultDiv.className = 'status error';
-                return;
+        document.addEventListener('DOMContentLoaded', async () => {
+            await App.fetchSession();
+            App.renderNavbar('upload');
+
+            // Loader functions
+            function showLoader(text = 'Uploading file...') {
+                const overlay = document.getElementById('loaderOverlay');
+                const loaderText = document.getElementById('loaderText');
+                loaderText.textContent = text;
+                overlay.classList.add('active');
             }
+
+            function hideLoader() {
+                const overlay = document.getElementById('loaderOverlay');
+                overlay.classList.remove('active');
+            }
+
+            function updateLoaderProgress(percent, text = null) {
+                const progressBar = document.getElementById('loaderProgressBar');
+                const percentage = document.getElementById('loaderPercentage');
+                progressBar.style.width = percent + '%';
+                percentage.textContent = Math.round(percent) + '%';
+                if (text) {
+                    document.getElementById('loaderText').textContent = text;
+                }
+            }
+
+            const form = document.getElementById('uploadForm');
+            const resultDiv = document.getElementById('result');
             
-            resultDiv.textContent = 'Uploading...';
-            resultDiv.className = 'status';
-            
-            try {
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 
-                const resp = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                    // Don't set Content-Type header - browser will set it automatically with boundary
-                });
+                const fileInput = document.getElementById('fileInput');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    resultDiv.textContent = 'Please select a file';
+                    resultDiv.className = 'status error';
+                    return;
+                }
                 
-                const text = await resp.text();
-                
-                if (resp.ok) {
-                    try {
-                        const json = JSON.parse(text);
-                        resultDiv.textContent = `Successfully imported ${json.imported || 0} users`;
-                        resultDiv.className = 'status success';
-                    } catch {
-                        resultDiv.textContent = text;
-                        resultDiv.className = 'status success';
+                // Show loader
+                showLoader('Uploading file...');
+                updateLoaderProgress(20);
+
+                // Simulate progress during upload
+                const progressInterval = setInterval(() => {
+                    const current = parseInt(document.getElementById('loaderProgressBar').style.width) || 20;
+                    if (current < 80) {
+                        updateLoaderProgress(current + 10, 'Processing file...');
                     }
-                } else {
-                    resultDiv.textContent = 'Error: ' + text;
+                }, 300);
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    
+                    updateLoaderProgress(50, 'Uploading to server...');
+                    
+                    const resp = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    clearInterval(progressInterval);
+                    updateLoaderProgress(90, 'Saving to Datastore...');
+                    
+                    const text = await resp.text();
+                    
+                    setTimeout(() => {
+                        updateLoaderProgress(100, 'Upload complete!');
+                        
+                        setTimeout(() => {
+                            hideLoader();
+                            
+                            if (resp.ok) {
+                                try {
+                                    const json = JSON.parse(text);
+                                    resultDiv.textContent = `Successfully imported ${json.imported || 0} users`;
+                                    resultDiv.className = 'status success';
+                                } catch {
+                                    resultDiv.textContent = text;
+                                    resultDiv.className = 'status success';
+                                }
+                            } else {
+                                resultDiv.textContent = 'Error: ' + text;
+                                resultDiv.className = 'status error';
+                            }
+                        }, 500);
+                    }, 500);
+                } catch (err) {
+                    clearInterval(progressInterval);
+                    hideLoader();
+                    resultDiv.textContent = 'Upload failed: ' + err.message;
                     resultDiv.className = 'status error';
                 }
-            } catch (err) {
-                resultDiv.textContent = 'Upload failed: ' + err.message;
-                resultDiv.className = 'status error';
-            }
+            });
         });
     </script>
 </body>

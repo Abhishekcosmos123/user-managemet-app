@@ -3,7 +3,6 @@ package com.example.usermanagement.util;
 import com.example.usermanagement.model.UserRecord;
 import com.google.cloud.bigquery.*;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -15,6 +14,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.ArrayList;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.Job;
+import com.google.cloud.bigquery.JobId;
+import com.google.cloud.bigquery.TableResult;
+import com.google.cloud.bigquery.FieldValueList;
 
 public class BigQueryUtil {
     private static final BigQuery bigquery = createBigQuery();
@@ -24,15 +29,6 @@ public class BigQueryUtil {
         try {
             String projectId = CredentialsUtil.getProjectId();
             GoogleCredentials credentials = CredentialsUtil.getCredentials();
-            System.out.println("Running as: " + credentials.getAuthenticationType());
-            System.out.println("Project ID: " + projectId);
-            System.out.println("Credentials: " + credentials.toString());
-            if (credentials instanceof ServiceAccountCredentials) {
-                ServiceAccountCredentials sa = (ServiceAccountCredentials) credentials;
-                System.out.println("Service Account: " + sa.getClientEmail());
-            } else {
-                System.out.println("Credentials type: " + credentials.getClass().getName());
-            }
             return BigQueryOptions.newBuilder()
                 .setProjectId(projectId)
                 .setCredentials(credentials)
@@ -164,6 +160,96 @@ public class BigQueryUtil {
                     // Ignore cleanup errors
                 }
             }
+        }
+    }
+
+    /**
+     * List all users from BigQuery table
+     */
+    public static List<UserRecord> listUsers(String datasetName, String tableName) throws IOException, InterruptedException {
+        List<UserRecord> users = new ArrayList<>();
+        
+        String query = String.format(
+            "SELECT name, dob, email, password, phone, gender, address FROM `%s.%s.%s` ORDER BY email",
+            CredentialsUtil.getProjectId(), datasetName, tableName
+        );
+        
+        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+        JobId jobId = JobId.of(UUID.randomUUID().toString());
+        Job queryJob = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+        
+        // Wait for query to complete
+        queryJob = queryJob.waitFor();
+        
+        if (queryJob.getStatus().getError() != null) {
+            throw new RuntimeException("BigQuery query failed: " + queryJob.getStatus().getError().toString());
+        }
+        
+        // Get results
+        TableResult result = queryJob.getQueryResults();
+        for (FieldValueList row : result.iterateAll()) {
+            UserRecord user = new UserRecord();
+            user.setName(getFieldValue(row, "name"));
+            user.setDob(getFieldValue(row, "dob"));
+            user.setEmail(getFieldValue(row, "email"));
+            user.setPassword(getFieldValue(row, "password"));
+            user.setPhone(getFieldValue(row, "phone"));
+            user.setGender(getFieldValue(row, "gender"));
+            user.setAddress(getFieldValue(row, "address"));
+            users.add(user);
+        }
+        
+        return users;
+    }
+
+    /**
+     * Get set of existing email addresses from BigQuery table (for duplicate checking)
+     */
+    public static java.util.Set<String> getExistingEmails(String datasetName, String tableName) throws IOException, InterruptedException {
+        java.util.Set<String> emails = new java.util.HashSet<>();
+        
+        try {
+            String query = String.format(
+                "SELECT DISTINCT email FROM `%s.%s.%s` WHERE email IS NOT NULL",
+                CredentialsUtil.getProjectId(), datasetName, tableName
+            );
+            
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+            JobId jobId = JobId.of(UUID.randomUUID().toString());
+            Job queryJob = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+            
+            // Wait for query to complete
+            queryJob = queryJob.waitFor();
+            
+            if (queryJob.getStatus().getError() != null) {
+                // If table doesn't exist or is empty, return empty set
+                return emails;
+            }
+            
+            // Get results
+            TableResult result = queryJob.getQueryResults();
+            for (FieldValueList row : result.iterateAll()) {
+                String email = getFieldValue(row, "email");
+                if (email != null && !email.isEmpty()) {
+                    emails.add(email.toLowerCase().trim());
+                }
+            }
+        } catch (Exception e) {
+            // If query fails (e.g., table doesn't exist), return empty set
+            // This allows first migration to proceed
+        }
+        
+        return emails;
+    }
+
+    private static String getFieldValue(FieldValueList row, String fieldName) {
+        try {
+            if (row.get(fieldName).isNull()) {
+                return null;
+            }
+            return row.get(fieldName).getStringValue();
+        } catch (Exception e) {
+            return null;
         }
     }
 }

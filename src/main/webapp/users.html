@@ -5,120 +5,278 @@
     <title>User Directory</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
 </head>
 
 <body>
-    <div class="app-shell">
-        <header class="navbar">
-            <div class="nav-brand">USER MGMT</div>
-            <div class="nav-links">
-                <a href="index.html">Login</a>
-                <a href="upload.html">Upload</a>
-                <a href="users.html" class="active">Users</a>
-                <a href="migrate.html">Migrate</a>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-container">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-header">
+                <h3 class="modal-title">Delete User</h3>
+                <p class="modal-message" id="modalMessage">Are you sure you want to delete this user? This action cannot be undone.</p>
             </div>
-        </header>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-delete" id="modalConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+        <header class="navbar" data-page="users"></header>
 
         <main class="page">
-        <div class="card">
-            <div class="table-toolbar">
-                <div class="field-inline">
-                    <input id="search" type="text" placeholder="Search by name, email, phone"/>
-                    <span class="pill" id="countPill">0 users</span>
-                </div>
-                <button id="refresh">Refresh</button>
-            </div>
+            <div class="card">
+                <h2>User Directory</h2>
+                <p class="subtitle muted">Manage and search through all registered users</p>
+                
 
-            <table id="usersTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>DOB</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Gender</th>
-                        <th>Address</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+                <table id="usersTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>DOB</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Gender</th>
+                            <th>Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                Loading users...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div id="pager" class="pager-container"></div>
+            </div>
         </main>
     </div>
 
     <script>
-        async function fetchUsers() {
-            const res = await fetch('/api/users');
-            return await res.json();
-        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await App.fetchSession();
+            if (!session.loggedIn) {
+                window.location.href = 'index.html';
+                return;
+            }
+            App.renderNavbar('users');
 
-        function render(users) {
-            const tbody = document.querySelector('#usersTable tbody');
-            tbody.innerHTML = '';
+            let currentPage = 1;
+            let currentPageSize = 10;
+            let currentSearch = '';
+            let totalItems = 0;
+            let userToDelete = null;
 
-            for (const u of users) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="Name">${escapeHtml(u.name)}</td>
-                    <td data-label="DOB">${escapeHtml(u.dob)}</td>
-                    <td data-label="Email">${escapeHtml(u.email)}</td>
-                    <td data-label="Phone">${escapeHtml(u.phone)}</td>
-                    <td data-label="Gender">${escapeHtml(u.gender)}</td>
-                    <td data-label="Address">${escapeHtml(u.address)}</td>
-                    <td data-label="Actions">
-                        <button data-id="${u.email}" class="delete">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+            // Modal functions
+            function showDeleteModal(userEmail) {
+                userToDelete = userEmail;
+                const modal = document.getElementById('deleteModal');
+                const message = document.getElementById('modalMessage');
+                message.textContent = `Are you sure you want to delete user "${userEmail}"? This action cannot be undone.`;
+                modal.classList.add('active');
             }
 
-            document.querySelectorAll('.delete').forEach(b => {
-                b.addEventListener('click', async () => {
-                    const id = b.getAttribute('data-id');
-                    if (!confirm('Delete user ' + id + '?')) return;
+            function hideDeleteModal() {
+                const modal = document.getElementById('deleteModal');
+                modal.classList.remove('active');
+                userToDelete = null;
+            }
 
-                    const resp = await fetch('/api/users/delete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'id=' + encodeURIComponent(id)
-                    });
-
-                    if (resp.ok) loadAndRender();
-                    else alert('Failed to delete');
-                });
+            // Modal event listeners
+            document.getElementById('modalCancel').addEventListener('click', () => {
+                hideDeleteModal();
             });
-        }
 
-        function filterUsers(users, q) {
-            if (!q) return users;
-            q = q.toLowerCase();
-            return users.filter(u =>
-                (u.name || '').toLowerCase().includes(q) ||
-                (u.email || '').toLowerCase().includes(q) ||
-                (u.phone || '').toLowerCase().includes(q)
-            );
-        }
+            document.getElementById('modalConfirm').addEventListener('click', async () => {
+                if (!userToDelete) return;
+                
+                const resp = await fetch('/api/users/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'id=' + encodeURIComponent(userToDelete)
+                });
 
-        function escapeHtml(s) {
-            if (!s) return '';
-            return s.replaceAll('&','&amp;')
-                    .replaceAll('<','&lt;')
-                    .replaceAll('>','&gt;');
-        }
+                hideDeleteModal();
 
-        async function loadAndRender() {
-            const users = await fetchUsers();
-            const q = document.getElementById('search').value;
-            const filtered = filterUsers(users, q);
-            render(filtered);
-            const pill = document.getElementById('countPill');
-            pill.textContent = filtered.length + ' user' + (filtered.length === 1 ? '' : 's');
-        }
+                if (resp.ok) {
+                    await loadAndRender(currentPage, currentPageSize, currentSearch);
+                } else {
+                    alert('Failed to delete user');
+                }
+            });
 
-        document.getElementById('refresh').addEventListener('click', loadAndRender);
-        document.getElementById('search').addEventListener('input', loadAndRender);
-        window.addEventListener('load', loadAndRender);
+            // Close modal on overlay click
+            document.getElementById('deleteModal').addEventListener('click', (e) => {
+                if (e.target.id === 'deleteModal') {
+                    hideDeleteModal();
+                }
+            });
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideDeleteModal();
+                }
+            });
+
+            async function fetchUsers(page = 1, pageSize = 10, search = '') {
+                const params = new URLSearchParams({
+                    page: page.toString(),
+                    pageSize: pageSize.toString()
+                });
+                if (search && search.trim()) {
+                    params.append('search', search.trim());
+                }
+                
+                const res = await fetch(`/api/users?${params}`);
+                if (!res.ok) {
+                    throw new Error('Failed to fetch users');
+                }
+                return await res.json();
+            }
+
+            function escapeHtml(s) {
+                if (!s) return '';
+                return s.replaceAll('&','&amp;')
+                        .replaceAll('<','&lt;')
+                        .replaceAll('>','&gt;');
+            }
+
+            function render(users, pageInfo) {
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+
+                if (users.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                No users found
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                for (const u of users) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td data-label="Name">${escapeHtml(u.name || '')}</td>
+                        <td data-label="DOB">${escapeHtml(u.dob || '')}</td>
+                        <td data-label="Email">${escapeHtml(u.email || '')}</td>
+                        <td data-label="Phone">${escapeHtml(u.phone || '')}</td>
+                        <td data-label="Gender">${escapeHtml(u.gender || '')}</td>
+                        <td data-label="Address">${escapeHtml(u.address || '')}</td>
+                        <td data-label="Actions">
+                            <button data-id="${u.email}" class="delete">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+
+                document.querySelectorAll('.delete').forEach(b => {
+                    b.addEventListener('click', () => {
+                        const id = b.getAttribute('data-id');
+                        showDeleteModal(id);
+                    });
+                });
+            }
+
+            function renderPager(pageInfo) {
+                const pager = document.getElementById('pager');
+                if (!pageInfo || pageInfo.totalPages === 0) {
+                    pager.innerHTML = '';
+                    return;
+                }
+
+                const { page, totalPages, totalItems } = pageInfo;
+                const startItem = totalItems === 0 ? 0 : (page - 1) * currentPageSize + 1;
+                const endItem = Math.min(page * currentPageSize, totalItems);
+
+                const pageState = { page, totalPages, totalItems, pageSize: currentPageSize, slice: [] };
+                App.renderPager('pager', pageState, (newPage) => {
+                    loadAndRender(newPage, currentPageSize, currentSearch);
+                }, {
+                    pageSize: currentPageSize,
+                    onPageSizeChange: (newSize) => {
+                        currentPageSize = newSize;
+                        loadAndRender(1, currentPageSize, currentSearch);
+                    }
+                });
+            }
+
+            async function loadAndRender(page = 1, pageSize = 10, search = '') {
+                try {
+                    const tbody = document.querySelector('#usersTable tbody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                Loading...
+                            </td>
+                        </tr>
+                    `;
+
+                    const response = await fetchUsers(page, pageSize, search);
+                    const { users, page: currentPageNum, totalItems: total, totalPages, hasPrev, hasNext } = response;
+                    
+                    currentPage = currentPageNum;
+                    totalItems = total;
+
+                    render(users, { page: currentPageNum, totalPages, totalItems, hasPrev, hasNext });
+                    renderPager({ page: currentPageNum, totalPages, totalItems, pageSize: currentPageSize, hasPrev, hasNext });
+                } catch (err) {
+                    const tbody = document.querySelector('#usersTable tbody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--error);">
+                                Error loading users: ${err.message}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+            // Auto-refresh functionality
+            let autoRefreshInterval = null;
+
+            function startAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                // Refresh every 30 seconds
+                autoRefreshInterval = setInterval(() => {
+                    loadAndRender(currentPage, currentPageSize, currentSearch);
+                }, 30000);
+            }
+
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+
+            // Event listeners - Listen to navbar search
+            window.addEventListener('navbarSearch', (e) => {
+                currentSearch = e.detail;
+                loadAndRender(1, currentPageSize, currentSearch);
+            });
+
+            // Initial load
+            loadAndRender(1, currentPageSize, '');
+            startAutoRefresh();
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                stopAutoRefresh();
+            });
+        });
     </script>
 </body>
 </html>
