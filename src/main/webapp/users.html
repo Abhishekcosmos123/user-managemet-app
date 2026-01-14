@@ -12,14 +12,20 @@
     <!-- Delete Confirmation Modal -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal-container">
-            <div class="modal-icon">⚠️</div>
-            <div class="modal-header">
-                <h3 class="modal-title">Delete User</h3>
-                <p class="modal-message" id="modalMessage">Are you sure you want to delete this user? This action cannot be undone.</p>
+            <div id="modalContent">
+                <div class="modal-icon">⚠️</div>
+                <div class="modal-header">
+                    <h3 class="modal-title">Delete User</h3>
+                    <p class="modal-message" id="modalMessage">Are you sure you want to delete this user? This action cannot be undone.</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
+                    <button class="modal-btn modal-btn-delete" id="modalConfirm">Delete</button>
+                </div>
             </div>
-            <div class="modal-actions">
-                <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
-                <button class="modal-btn modal-btn-delete" id="modalConfirm">Delete</button>
+            <div id="modalDeleting" class="modal-deleting" style="display: none;">
+                <div class="modal-deleting-spinner"></div>
+                <div class="modal-deleting-text">Deleting user...</div>
             </div>
         </div>
     </div>
@@ -80,6 +86,11 @@
                 const modal = document.getElementById('deleteModal');
                 const message = document.getElementById('modalMessage');
                 message.textContent = `Are you sure you want to delete user "${userEmail}"? This action cannot be undone.`;
+                // Reset modal state
+                document.getElementById('modalContent').style.display = 'block';
+                document.getElementById('modalDeleting').style.display = 'none';
+                document.getElementById('modalCancel').disabled = false;
+                document.getElementById('modalConfirm').disabled = false;
                 modal.classList.add('active');
             }
 
@@ -87,6 +98,11 @@
                 const modal = document.getElementById('deleteModal');
                 modal.classList.remove('active');
                 userToDelete = null;
+                // Reset modal state
+                document.getElementById('modalContent').style.display = 'block';
+                document.getElementById('modalDeleting').style.display = 'none';
+                document.getElementById('modalCancel').disabled = false;
+                document.getElementById('modalConfirm').disabled = false;
             }
 
             // Modal event listeners
@@ -97,18 +113,29 @@
             document.getElementById('modalConfirm').addEventListener('click', async () => {
                 if (!userToDelete) return;
                 
-                const resp = await fetch('/api/users/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'id=' + encodeURIComponent(userToDelete)
-                });
+                // Show deleting state
+                document.getElementById('modalContent').style.display = 'none';
+                document.getElementById('modalDeleting').style.display = 'flex';
+                document.getElementById('modalCancel').disabled = true;
+                document.getElementById('modalConfirm').disabled = true;
+                
+                try {
+                    const resp = await fetch('/api/users/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id=' + encodeURIComponent(userToDelete)
+                    });
 
-                hideDeleteModal();
+                    hideDeleteModal();
 
-                if (resp.ok) {
-                    await loadAndRender(currentPage, currentPageSize, currentSearch);
-                } else {
-                    alert('Failed to delete user');
+                    if (resp.ok) {
+                        await loadAndRender(currentPage, currentPageSize, currentSearch);
+                    } else {
+                        alert('Failed to delete user');
+                    }
+                } catch (err) {
+                    hideDeleteModal();
+                    alert('Error deleting user: ' + err.message);
                 }
             });
 
@@ -214,10 +241,14 @@
             async function loadAndRender(page = 1, pageSize = 10, search = '') {
                 try {
                     const tbody = document.querySelector('#usersTable tbody');
+                    // Show table loader
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                                Loading...
+                            <td colspan="7">
+                                <div class="table-loader">
+                                    <div class="table-loader-spinner"></div>
+                                    <div class="table-loader-text">${search ? 'Searching users...' : 'Loading users...'}</div>
+                                </div>
                             </td>
                         </tr>
                     `;

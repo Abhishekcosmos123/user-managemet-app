@@ -46,7 +46,9 @@ public class UploadServlet extends HttpServlet {
                 cols.add(c.getStringCellValue().trim().toLowerCase());
             }
 
-            int count = 0;
+            int totalCount = 0;
+            int uploadedCount = 0;
+            
             while (rowIt.hasNext()) {
                 Row r = rowIt.next();
                 UserRecord u = new UserRecord();
@@ -64,15 +66,30 @@ public class UploadServlet extends HttpServlet {
                         default: break;
                     }
                 }
+                
+                // Skip rows without email
                 if (u.getEmail() == null || u.getEmail().trim().isEmpty()) continue;
+                
                 // Normalize email to lowercase for consistent lookups
-                u.setEmail(u.getEmail().trim().toLowerCase());
-                DatastoreUtil.saveUser(u);
-                count++;
+                String email = u.getEmail().trim().toLowerCase();
+                u.setEmail(email);
+                
+                // Count total valid records
+                totalCount++;
+                
+                // Check if user already exists (duplicate check)
+                UserRecord existingUser = DatastoreUtil.getUserByEmail(email);
+                if (existingUser == null) {
+                    // User doesn't exist, save as new
+                    DatastoreUtil.saveUser(u);
+                    uploadedCount++;
+                }
+                // If user exists, skip (don't overwrite/duplicate)
             }
 
             Map<String, Object> result = new HashMap<>();
-            result.put("imported", count);
+            result.put("total", totalCount);
+            result.put("uploaded", uploadedCount);
             resp.setContentType("application/json");
             resp.getWriter().write(gson.toJson(result));
         } catch (Exception ex) {

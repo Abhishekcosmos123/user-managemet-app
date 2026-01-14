@@ -12,11 +12,13 @@
     <div class="loader-overlay" id="loaderOverlay">
         <div class="loader-container">
             <div class="loader-spinner"></div>
-            <div class="loader-text" id="loaderText">Uploading file...</div>
-            <div class="loader-progress">
-                <div class="loader-progress-bar" id="loaderProgressBar"></div>
+            <div class="loader-content">
+                <div class="loader-text" id="loaderText">Uploading file...</div>
+                <div class="loader-progress">
+                    <div class="loader-progress-bar" id="loaderProgressBar"></div>
+                </div>
+                <div class="loader-percentage" id="loaderPercentage">0%</div>
             </div>
-            <div class="loader-percentage" id="loaderPercentage">0%</div>
         </div>
     </div>
 
@@ -25,8 +27,15 @@
 
         <main class="page">
             <div class="card">
-                <h2>Upload Users</h2>
-                <p class="subtitle muted">Import user data from an Excel file (.xlsx format)</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <h2 style="margin: 0;">Upload Users</h2>
+                        <p class="subtitle muted" style="margin-top: 4px;">Import user data from an Excel file (.xlsx format)</p>
+                    </div>
+                    <button type="button" class="secondary" onclick="window.location='/sample/generate'" style="white-space: nowrap;">
+                        Download Sample
+                    </button>
+                </div>
                 
                 <form id="uploadForm" enctype="multipart/form-data" method="post" action="/upload">
                     <div class="field-group">
@@ -36,11 +45,8 @@
                             Required columns: Name, DOB, Email, Password, Phone, Gender, Address
                         </p>
                     </div>
-                    <div class="field-inline" style="margin-top: 20px;">
+                    <div style="margin-top: 20px;">
                         <button type="submit" class="button-primary">Upload Excel</button>
-                        <button type="button" class="secondary" onclick="window.location='/sample/generate'">
-                            Download Sample
-                        </button>
                     </div>
                 </form>
                 <div id="result"></div>
@@ -79,7 +85,7 @@
             const form = document.getElementById('uploadForm');
             const resultDiv = document.getElementById('result');
             
-            form.addEventListener('submit', async (e) => {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 
                 const fileInput = document.getElementById('fileInput');
@@ -91,59 +97,84 @@
                 
                 // Show loader
                 showLoader('Uploading file...');
-                updateLoaderProgress(20);
-
-                // Simulate progress during upload
-                const progressInterval = setInterval(() => {
-                    const current = parseInt(document.getElementById('loaderProgressBar').style.width) || 20;
-                    if (current < 80) {
-                        updateLoaderProgress(current + 10, 'Processing file...');
-                    }
-                }, 300);
+                updateLoaderProgress(0);
                 
-                try {
-                    const formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    
-                    updateLoaderProgress(50, 'Uploading to server...');
-                    
-                    const resp = await fetch('/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    clearInterval(progressInterval);
-                    updateLoaderProgress(90, 'Saving to Datastore...');
-                    
-                    const text = await resp.text();
-                    
-                    setTimeout(() => {
-                        updateLoaderProgress(100, 'Upload complete!');
+                // Use XMLHttpRequest for real upload progress tracking
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                // Track upload progress
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        // Show progress up to 90% during upload
+                        const uploadProgress = Math.min(percentComplete * 0.9, 90);
+                        updateLoaderProgress(uploadProgress, 'Uploading file...');
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        updateLoaderProgress(95, 'Processing file...');
                         
                         setTimeout(() => {
-                            hideLoader();
+                            updateLoaderProgress(100, 'Upload complete!');
                             
-                            if (resp.ok) {
+                            setTimeout(() => {
+                                hideLoader();
+                                
                                 try {
-                                    const json = JSON.parse(text);
-                                    resultDiv.textContent = `Successfully imported ${json.imported || 0} users`;
+                                    const responseText = xhr.responseText.trim();
+                                    if (!responseText) {
+                                        resultDiv.textContent = 'Upload successful';
+                                        resultDiv.className = 'status success';
+                                        return;
+                                    }
+                                    const json = JSON.parse(responseText);
+                                    const totalCount = json.total;
+                                    const uploadedCount = json.uploaded;
+                                    if (typeof totalCount === 'number' && typeof uploadedCount === 'number') {
+                                        resultDiv.textContent = `Uploaded ${uploadedCount} out of ${totalCount} user${totalCount !== 1 ? 's' : ''}`;
+                                    } else {
+                                        resultDiv.textContent = responseText || 'Upload successful';
+                                    }
                                     resultDiv.className = 'status success';
-                                } catch {
-                                    resultDiv.textContent = text;
-                                    resultDiv.className = 'status success';
+                                } catch (e) {
+                                    // If JSON parsing fails, show the raw response
+                                    const responseText = xhr.responseText.trim();
+                                    if (responseText.toLowerCase().includes('error')) {
+                                        resultDiv.textContent = responseText;
+                                        resultDiv.className = 'status error';
+                                    } else {
+                                        resultDiv.textContent = responseText || 'Upload successful';
+                                        resultDiv.className = 'status success';
+                                    }
                                 }
-                            } else {
-                                resultDiv.textContent = 'Error: ' + text;
-                                resultDiv.className = 'status error';
-                            }
-                        }, 500);
-                    }, 500);
-                } catch (err) {
-                    clearInterval(progressInterval);
+                            }, 500);
+                        }, 300);
+                    } else {
+                        hideLoader();
+                        resultDiv.textContent = 'Error: ' + xhr.responseText;
+                        resultDiv.className = 'status error';
+                    }
+                });
+                
+                xhr.addEventListener('error', () => {
                     hideLoader();
-                    resultDiv.textContent = 'Upload failed: ' + err.message;
+                    resultDiv.textContent = 'Upload failed: Network error';
                     resultDiv.className = 'status error';
-                }
+                });
+                
+                xhr.addEventListener('abort', () => {
+                    hideLoader();
+                    resultDiv.textContent = 'Upload cancelled';
+                    resultDiv.className = 'status error';
+                });
+                
+                // Start the upload
+                xhr.open('POST', '/upload');
+                xhr.send(formData);
             });
         });
     </script>

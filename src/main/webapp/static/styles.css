@@ -579,8 +579,6 @@ button.delete:hover {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
-    margin: 0;
-    padding: 0;
 }
 
 .loader-overlay.active {
@@ -589,24 +587,37 @@ button.delete:hover {
 }
 
 .loader-container {
-    background: var(--surface);
+    background: transparent;
     border-radius: 24px;
     padding: 48px 40px;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
     text-align: center;
     min-width: 360px;
-    max-width: 90vw;
-    margin: 0 auto;
+    max-width: 500px;
+    width: auto;
     position: relative;
-    border: 1px solid var(--border);
-    transform: translate(0, 0);
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    box-sizing: border-box;
 }
 
 .loader-spinner {
     width: 60px;
     height: 60px;
-    margin: 0 auto 20px;
     position: relative;
+    flex-shrink: 0;
+}
+
+.loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
 }
 
 .loader-spinner::before {
@@ -627,17 +638,23 @@ button.delete:hover {
 .loader-text {
     font-size: 16px;
     font-weight: 600;
-    color: var(--text-heading);
+    color: #ffffff;
     margin-bottom: 12px;
+    text-align: left;
+    width: 100%;
+    max-width: 100%;
+    display: block;
 }
 
 .loader-progress {
     width: 100%;
     height: 8px;
-    background: var(--bg-medium);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     overflow: hidden;
-    margin-top: 16px;
+    margin-top: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .loader-progress-bar {
@@ -673,9 +690,14 @@ button.delete:hover {
 
 .loader-percentage {
     font-size: 14px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.9);
     margin-top: 8px;
     font-weight: 500;
+    text-align: left;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* Enhanced Input Fields */
@@ -776,6 +798,31 @@ input::placeholder {
     white-space: nowrap;
 }
 
+/* Table Loader */
+.table-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+}
+
+.table-loader-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--primary-soft);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.table-loader-text {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
 /* Modal Styles */
 .modal-overlay {
     position: fixed;
@@ -802,11 +849,10 @@ input::placeholder {
 .modal-container {
     background: var(--surface);
     border-radius: 20px;
-    padding: 32px;
+    padding: 36px;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
-    min-width: 400px;
+    min-width: 420px;
     max-width: 90vw;
-    margin: 0 auto;
     position: relative;
     border: 1px solid var(--border);
     transform: scale(0.95);
@@ -818,14 +864,15 @@ input::placeholder {
 }
 
 .modal-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    text-align: center;
 }
 
 .modal-title {
     font-size: 24px;
     font-weight: 700;
     color: var(--text-heading);
-    margin: 0 0 8px 0;
+    margin: 0 0 12px 0;
 }
 
 .modal-message {
@@ -839,17 +886,24 @@ input::placeholder {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    margin-top: 24px;
+    margin-top: 28px;
 }
 
 .modal-btn {
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
     border: none;
+    min-width: 100px;
+}
+
+.modal-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .modal-btn-cancel {
@@ -858,7 +912,7 @@ input::placeholder {
     border: 1px solid var(--border);
 }
 
-.modal-btn-cancel:hover {
+.modal-btn-cancel:hover:not(:disabled) {
     background: var(--bg-dark);
     border-color: var(--text-muted);
 }
@@ -869,21 +923,44 @@ input::placeholder {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-.modal-btn-delete:hover {
+.modal-btn-delete:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 .modal-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 20px;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 24px;
     border-radius: 50%;
     background: rgba(239, 68, 68, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 36px;
+}
+
+.modal-deleting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 0;
+}
+
+.modal-deleting-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--primary-soft);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.modal-deleting-text {
+    color: var(--text-body);
+    font-size: 15px;
+    font-weight: 500;
 }
 
 /* Responsive */

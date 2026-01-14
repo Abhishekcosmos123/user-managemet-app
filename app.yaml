@@ -1,6 +1,6 @@
-runtime: java11
-entrypoint: java -jar target/user-management-app-0.1.0.jar
+runtime: java17
 env: standard
+entrypoint: java -jar target/user-management-app-0.1.0.jar
 
 handlers:
   - url: /.*

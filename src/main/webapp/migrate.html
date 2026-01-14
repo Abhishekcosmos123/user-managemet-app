@@ -169,10 +169,22 @@
 
             async function loadAndRender(page = 1) {
                 try {
+                    const tbody = document.querySelector('#bigqueryUsersTable tbody');
+                    // Show table loader
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5">
+                                <div class="table-loader">
+                                    <div class="table-loader-spinner"></div>
+                                    <div class="table-loader-text">${currentSearch ? 'Searching users...' : 'Loading users from BigQuery...'}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+
                     const response = await fetchBigQueryUsers(page, currentPageSize, currentSearch);
                     renderUsers(response.users, response);
                     currentPage = response.page;
-
 
                     App.renderPager('pager', {
                         page: response.page,
